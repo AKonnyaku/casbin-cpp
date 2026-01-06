@@ -17,7 +17,7 @@ jobs:
       - name: Install dependencies
         run: |
           apt-get update
-          apt-get install -y build-essential cmake git python3 jq
+          apt-get install -y build-essential cmake git python3 jq wget
 
       - name: Checkout PR branch
         uses: actions/checkout@v4
@@ -29,12 +29,19 @@ jobs:
         run: |
           BASE_SHA="${{ github.event.pull_request.base.sha }}"
           HEAD_SHA="${{ github.event.pull_request.head.sha }}"
-          echo "base_short=${BASE_SHA:0:7}" >> $GITHUB_OUTPUT
-          echo "head_short=${HEAD_SHA:0:7}" >> $GITHUB_OUTPUT
+          echo "base_short=$(echo $BASE_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+          echo "head_short=$(echo $HEAD_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
           
           # We need to mark the directory as safe because we are mounting it? 
           # Or just configuring git since we might be in a container
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Pre-fetch nlohmann/json
+        run: |
+          wget https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz -O json.tar.gz
+          mkdir -p json-src
+          tar -xzf json.tar.gz -C json-src --strip-components=1
+          echo "JSON_SRC=$(pwd)/json-src" >> $GITHUB_ENV
 
       - name: Build and Run benchmark on PR branch
         run: |
@@ -42,7 +49,8 @@ jobs:
             -DCASBIN_BUILD_BENCHMARK=ON \
             -DCASBIN_BUILD_TEST=ON \
             -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC
           
           cmake --build build-pr --target casbin_benchmark -j$(nproc)
           
@@ -61,7 +69,8 @@ jobs:
             -DCASBIN_BUILD_BENCHMARK=ON \
             -DCASBIN_BUILD_TEST=ON \
             -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
-            -DCMAKE_BUILD_TYPE=Release
+            -DCMAKE_BUILD_TYPE=Release \
+            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC
             
           cmake --build build-base --target casbin_benchmark -j$(nproc)
           
