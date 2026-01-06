@@ -45,10 +45,16 @@ jobs:
           echo "JSON_SRC=$(pwd)/json-src" >> $GITHUB_ENV
           
           # googletest
-          wget https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz -O gtest.tar.gz
-          mkdir -p gtest-src
-          tar -xzf gtest.tar.gz -C gtest-src --strip-components=1
-          echo "GTEST_SRC=$(pwd)/gtest-src" >> $GITHUB_ENV
+           wget https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz -O gtest.tar.gz
+           mkdir -p gtest-src
+           tar -xzf gtest.tar.gz -C gtest-src --strip-components=1
+           echo "GTEST_SRC=$(pwd)/gtest-src" >> $GITHUB_ENV
+           
+           # benchmark
+           wget https://github.com/google/benchmark/archive/refs/tags/v1.8.3.tar.gz -O bench.tar.gz
+           mkdir -p bench-src
+           tar -xzf bench.tar.gz -C bench-src --strip-components=1
+           echo "BENCH_SRC=$(pwd)/bench-src" >> $GITHUB_ENV
 
       - name: Build and Run benchmark on PR branch
         run: |
@@ -58,7 +64,8 @@ jobs:
             -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
             -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC \
-            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC
+            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_BENCHMARK=$BENCH_SRC
           
           cmake --build build-pr --target casbin_benchmark -j$(nproc)
           
@@ -79,7 +86,8 @@ jobs:
             -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
             -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC \
-            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC
+            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_BENCHMARK=$BENCH_SRC
             
           cmake --build build-base --target casbin_benchmark -j$(nproc)
           
