@@ -36,12 +36,19 @@ jobs:
           # Or just configuring git since we might be in a container
           git config --global --add safe.directory "$GITHUB_WORKSPACE"
 
-      - name: Pre-fetch nlohmann/json
+      - name: Pre-fetch dependencies
         run: |
+          # json
           wget https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz -O json.tar.gz
           mkdir -p json-src
           tar -xzf json.tar.gz -C json-src --strip-components=1
           echo "JSON_SRC=$(pwd)/json-src" >> $GITHUB_ENV
+          
+          # googletest
+          wget https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz -O gtest.tar.gz
+          mkdir -p gtest-src
+          tar -xzf gtest.tar.gz -C gtest-src --strip-components=1
+          echo "GTEST_SRC=$(pwd)/gtest-src" >> $GITHUB_ENV
 
       - name: Build and Run benchmark on PR branch
         run: |
@@ -50,7 +57,8 @@ jobs:
             -DCASBIN_BUILD_TEST=ON \
             -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
-            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC
+            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC
           
           cmake --build build-pr --target casbin_benchmark -j$(nproc)
           
@@ -70,7 +78,8 @@ jobs:
             -DCASBIN_BUILD_TEST=ON \
             -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
             -DCMAKE_BUILD_TYPE=Release \
-            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC
+            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC
             
           cmake --build build-base --target casbin_benchmark -j$(nproc)
           
