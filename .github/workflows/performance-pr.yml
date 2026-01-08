@@ -1,0 +1,129 @@
+name: Performance Comparison for Pull Requests
+
+on:
+  pull_request:
+    branches: [master]
+
+jobs:
+  benchmark-pr:
+    name: Performance benchmark comparison
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential cmake git python3 jq wget dos2unix
+
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha }}
+
+      - name: Save commit info
+        id: commits
+        run: |
+          BASE_SHA="${{ github.event.pull_request.base.sha }}"
+          HEAD_SHA="${{ github.event.pull_request.head.sha }}"
+          echo "base_short=$(echo $BASE_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+          echo "head_short=$(echo $HEAD_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Pre-fetch dependencies
+        run: |
+          # json
+          wget https://github.com/nlohmann/json/archive/refs/tags/v3.11.2.tar.gz -O json.tar.gz
+          mkdir -p json-src
+          tar -xzf json.tar.gz -C json-src --strip-components=1
+          echo "JSON_SRC=$(pwd)/json-src" >> $GITHUB_ENV
+          
+          # googletest
+          wget https://github.com/google/googletest/archive/refs/tags/v1.14.0.tar.gz -O gtest.tar.gz
+          mkdir -p gtest-src
+          tar -xzf gtest.tar.gz -C gtest-src --strip-components=1
+          echo "GTEST_SRC=$(pwd)/gtest-src" >> $GITHUB_ENV
+          
+          # benchmark
+          wget https://github.com/google/benchmark/archive/refs/tags/v1.8.3.tar.gz -O bench.tar.gz
+          mkdir -p bench-src
+          tar -xzf bench.tar.gz -C bench-src --strip-components=1
+          echo "BENCH_SRC=$(pwd)/bench-src" >> $GITHUB_ENV
+
+      - name: Build and Run benchmark on PR branch
+        run: |
+          find . -name "*.conf" -exec dos2unix {} +
+          find . -name "*.csv" -exec dos2unix {} +
+          
+          cmake -B build-pr -S . \
+            -DCASBIN_BUILD_BENCHMARK=ON \
+            -DCASBIN_BUILD_TEST=ON \
+            -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_BENCHMARK=$BENCH_SRC
+          
+          cmake --build build-pr --target casbin_benchmark -j2
+          ./build-pr/tests/benchmarks/casbin_benchmark --benchmark_format=json > pr-bench.json
+
+      - name: Checkout base branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.base.sha }}
+          path: base
+
+      - name: Build and Run benchmark on base branch
+        run: |
+          cd base
+          find . -name "*.conf" -exec dos2unix {} +
+          find . -name "*.csv" -exec dos2unix {} +
+          
+          cmake -B build-base -S . \
+            -DCASBIN_BUILD_BENCHMARK=ON \
+            -DCASBIN_BUILD_TEST=ON \
+            -DCASBIN_BUILD_PYTHON_BINDINGS=OFF \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DFETCHCONTENT_SOURCE_DIR_JSON=$JSON_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_GOOGLETEST=$GTEST_SRC \
+            -DFETCHCONTENT_SOURCE_DIR_BENCHMARK=$BENCH_SRC
+            
+          cmake --build build-base --target casbin_benchmark -j2
+          ./build-base/tests/benchmarks/casbin_benchmark --benchmark_format=json > ../base-bench.json
+
+      - name: Compare benchmarks
+        id: compare
+        run: |
+          cat > comparison.md << 'EOF'
+          ## Benchmark Comparison
+          
+          Comparing base branch (`${{ steps.commits.outputs.base_short }}`)
+          vs PR branch (`${{ steps.commits.outputs.head_short }}`)
+          
+          ```
+          EOF
+          
+          # Run the formatter script
+          python3 .github/scripts/benchmark_formatter.py
+          
+          echo '```' >> comparison.md
+
+      - name: Save PR number
+        run: |
+          PR_NUMBER="${{ github.event.pull_request.number }}"
+          if [ -z "$PR_NUMBER" ]; then
+            echo "Error: Pull request number is not available in event payload." >&2
+            # For act/local testing, provide a dummy number if missing
+            if [ -n "$ACT" ]; then
+               echo "123" > pr_number.txt
+               exit 0
+            fi
+            exit 1
+          fi
+          echo "$PR_NUMBER" > pr_number.txt
+
+      - name: Upload benchmark results
+        uses: actions/upload-artifact@v4
+        with:
+          name: benchmark-results
+          path: |
+            comparison.md
+            pr_number.txt
