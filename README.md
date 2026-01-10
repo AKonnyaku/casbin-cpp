@@ -15,6 +15,8 @@ Windows (VS C++)  | :heavy_check_mark: Available
 Linux   | :heavy_check_mark: Available
 macOS   | :heavy_check_mark: Available
 
+**Note**: You can also run the CI workflow locally using [act](https://github.com/nektos/act).
+
 <br/>
 
 ![casbin Logo](./assets/images/casbin-logo.png)
