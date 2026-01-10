@@ -76,8 +76,7 @@ def main():
         
         # Extra info
         iterations = bench.get("iterations", 0)
-        repetition_index = bench.get("repetition_index", 0)
-        extra = f"iterations: {iterations}\nrepetition: {repetition_index}"
+        extra = f"{iterations} times"
 
         benches.append({
             "name": normalize_name(name),
