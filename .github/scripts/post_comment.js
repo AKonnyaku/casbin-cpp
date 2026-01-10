@@ -41,19 +41,23 @@ module.exports = async ({github, context, core}) => {
   const footer = '<sub>🤖 This comment will be automatically updated with the latest benchmark results.</sub>';
   const commentBody = `${comparison}\n\n${footer}`;
 
-  if (botComment) {
-    await github.rest.issues.updateComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      comment_id: botComment.id,
-      body: commentBody
-    });
-  } else {
-    await github.rest.issues.createComment({
-      owner: context.repo.owner,
-      repo: context.repo.repo,
-      issue_number: issue_number,
-      body: commentBody
-    });
+  try {
+    if (botComment) {
+      await github.rest.issues.updateComment({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        comment_id: botComment.id,
+        body: commentBody
+      });
+    } else {
+      await github.rest.issues.createComment({
+        owner: context.repo.owner,
+        repo: context.repo.repo,
+        issue_number: issue_number,
+        body: commentBody
+      });
+    }
+  } catch (error) {
+    core.setFailed('Failed to post or update GitHub comment: ' + error.message);
   }
 };
