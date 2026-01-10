@@ -55,6 +55,11 @@ def main():
         "url": os.environ.get("COMMIT_URL", ""),
     }
 
+    # Get CPU count
+    cpu_count = data.get("context", {}).get("num_cpus")
+    if not cpu_count:
+        cpu_count = os.cpu_count() or 1
+
     benches = []
     for bench in data.get("benchmarks", []):
         # Skip aggregate items (mean, median, stddev) if any
