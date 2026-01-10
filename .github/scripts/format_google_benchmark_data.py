@@ -92,7 +92,7 @@ def main():
         "commit": commit_info,
         "date": int(datetime.datetime.now().timestamp() * 1000),
         "tool": "cpp",
-        "procs": "1",  # Assuming single process for now
+        "procs": cpu_count,
         "benches": benches,
     }
 
