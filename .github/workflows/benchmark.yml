@@ -18,6 +18,7 @@ on:
   push:
     branches:
       - master
+      - yml-test
   pull_request:
 
 jobs:
@@ -28,6 +29,12 @@ jobs:
       - name: Checkout
         id: checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Setup CMake
         uses: jwlawson/actions-setup-cmake@v2
         with:
@@ -44,8 +51,46 @@ jobs:
         id: run-benchmark
         run: |
           cd ./build/tests/benchmarks
-          ./casbin_benchmark
+          ./casbin_benchmark --benchmark_format=json > benchmark_result.json
+          mv benchmark_result.json ../../../
+
+      - name: Checkout Data Repo
+        uses: actions/checkout@v4
+        with:
+          repository: AKonnyaku/casbin-benchmark-data
+          token: ${{ secrets.CASBIN_BENCHMARK_DATA_TOKEN }}
+          path: benchmark-data
+
+      - name: Format Benchmark Data
+        env:
+          COMMIT_AUTHOR_EMAIL: ${{ github.event.head_commit.author.email }}
+          COMMIT_AUTHOR_NAME: ${{ github.event.head_commit.author.name }}
+          COMMIT_AUTHOR_USERNAME: ${{ github.event.head_commit.author.username }}
+          COMMIT_COMMITTER_EMAIL: ${{ github.event.head_commit.committer.email }}
+          COMMIT_COMMITTER_NAME: ${{ github.event.head_commit.committer.name }}
+          COMMIT_COMMITTER_USERNAME: ${{ github.event.head_commit.committer.username }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMIT_TIMESTAMP: ${{ github.event.head_commit.timestamp }}
+          COMMIT_URL: ${{ github.event.head_commit.url }}
+          COMMIT_ID: ${{ github.event.head_commit.id }}
+        run: |
+          python .github/scripts/format_google_benchmark_data.py benchmark_result.json formatted_result.json
+
+      - name: Push Benchmark Result
+        working-directory: benchmark-data
+        run: |
+          mkdir -p casbin-cpp
+          cp ../formatted_result.json casbin-cpp/benchmark-${{ github.sha }}.json
+          
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          
+          git add casbin-cpp/benchmark-${{ github.sha }}.json
+          git commit -m "Add benchmark result for casbin-cpp commit ${{ github.sha }}"
+          git push
+
       - name: Cleanup
         id: clean-up
+        if: always()
         run: |
-          rm -r build
+          rm -rf build benchmark-data benchmark_result.json formatted_result.json
