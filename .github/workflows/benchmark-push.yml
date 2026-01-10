@@ -12,18 +12,16 @@
 #  See the License for the specific language governing permissions and
 #  limitations under the License.
 
-name: Benchmark
+name: Push Benchmark Data
 
 on:
   push:
     branches:
       - master
-      - yml-test
-  pull_request:
 
 jobs:
   benchmark:
-    name: Benchmark
+    name: Run Benchmark & Push Data
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
