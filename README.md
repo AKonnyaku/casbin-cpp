@@ -15,6 +15,8 @@ Windows (VS C++)  | :heavy_check_mark: Available
 Linux   | :heavy_check_mark: Available
 macOS   | :heavy_check_mark: Available
 
+**Note**: You can also run the CI workflow locally using [act](https://github.com/nektos/act).
+
 <br/>
 
 ![casbin Logo](./assets/images/casbin-logo.png)
@@ -387,3 +389,4 @@ This project is licensed under the [Apache 2.0 license](LICENSE).
 If you have any issues or feature requests, please contact us. PR is welcomed.
 - https://github.com/casbin/casbin-cpp/issues
 - https://discord.gg/S5UjpzGZjN
+<!-- Test trigger CI -->
